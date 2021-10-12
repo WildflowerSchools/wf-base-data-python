@@ -31,6 +31,7 @@ setup(
     include_package_data=True,
     description='Python tools for working with Wildflower Schools core data',
     long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
     url='https://github.com/WildflowerSchools/wf-core-data-python',
     author='Theodore Quinn',
     author_email='ted.quinn@wildflowerschools.org',
