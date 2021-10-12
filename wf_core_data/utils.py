@@ -94,5 +94,22 @@ def select_from_dataframe(
     if select_dict is None:
         return dataframe
     keys, values = zip(*select_dict.items())
-    dataframe = dataframe.xs(values, level=keys)
+    for level, value in select_dict.items():
+        dataframe = select_index_level(
+            dataframe,
+            value=value,
+            level=level
+        )
+    return dataframe
+
+def select_index_level(
+    dataframe,
+    value,
+    level
+):
+    dataframe = (
+        dataframe
+        .loc[dataframe.index.get_level_values(level) == value]
+        .reset_index(level=level, drop=True)
+    )
     return dataframe
