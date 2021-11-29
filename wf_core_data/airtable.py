@@ -7,7 +7,7 @@ from collections import OrderedDict
 import datetime
 import time
 import logging
-# import os
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -186,11 +186,11 @@ class AirtableClient:
                 ('hub_at', fields.get('Hub')),
                 ('pod_at', fields.get('Pod')),
                 ('school_name_at', fields.get('Name')),
-                ('school_status_at', fields.get('Status')),
-                ('school_ssj_stage_at', fields.get('SSJ Stage')),
+                ('school_status_at', fields.get('School Status')),
+                ('school_ssj_stage_at', fields.get('School Startup Stage')),
                 ('school_governance_model_at', fields.get('Governance Model')),
                 ('school_ages_served_at', fields.get('Ages served')),
-                ('school_phone_number_at', fields.get('Phone Number')),
+                ('school_phone_number_at', fields.get('School Phone')),
                 ('school_location_ids_at', fields.get('Locations')),
                 ('school_time_zone_at', fields.get('Time Zone')),
                 ('school_id_tc', fields.get('TC_school_ID'))
