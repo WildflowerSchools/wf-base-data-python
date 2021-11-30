@@ -356,6 +356,8 @@ def convert_school_data_to_df(school_data):
     )
     school_data_df['pull_datetime'] = pd.to_datetime(school_data_df['pull_datetime'])
     school_data_df['school_created_datetime_at'] = pd.to_datetime(school_data_df['school_created_datetime_at'])
+    school_data_df['hub_at'] = school_data_df['hub_at'].apply(wf_core_data.utils.to_singleton)
+    school_data_df['pod_at'] = school_data_df['pod_at'].apply(wf_core_data.utils.to_singleton)
     school_data_df['school_id_tc'] = pd.to_numeric(school_data_df['school_id_tc']).astype('Int64')
     school_data_df = school_data_df.astype({
         'school_id_at': 'string',
