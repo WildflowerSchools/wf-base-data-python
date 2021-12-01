@@ -275,6 +275,46 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return pod_data
 
+    def fetch_family_survey_school_inputs(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=SCHOOLS_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching family survey school inputs from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='Family survey - school inputs',
+            params=params
+        )
+        school_inputs=list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('school_input_id_at', record.get('id')),
+                ('school_input_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('school_id_at', fields.get('Schools')),
+                ('include_school_in_data', fields.get('Include in data')),
+                ('include_school_in_reporting', fields.get('Include in reporting')),
+                ('school_data_pending', fields.get('Data pending')),
+                ('school_report_language', fields.get('Report language'))
+            ])
+            school_inputs.append(datum)
+        if format == 'dataframe':
+            school_inputs = convert_school_inputs_to_df(school_inputs)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return school_inputs
+
     def bulk_get(
         self,
         base_id,
@@ -474,3 +514,23 @@ def convert_pod_data_to_df(pod_data):
     })
     pod_data_df.set_index('pod_id_at', inplace=True)
     return pod_data_df
+
+def convert_school_inputs_to_df(school_inputs):
+    if len(school_inputs) == 0:
+        return pd.DataFrame()
+    school_inputs_df = pd.DataFrame(
+        school_inputs,
+        dtype='object'
+    )
+    school_inputs_df['pull_datetime'] = pd.to_datetime(school_inputs_df['pull_datetime'])
+    school_inputs_df['school_input_created_datetime_at'] = pd.to_datetime(school_inputs_df['school_input_created_datetime_at'])
+    school_inputs_df['school_id_at'] = school_inputs_df['school_id_at'].apply(wf_core_data.utils.to_singleton)
+    school_inputs_df = school_inputs_df.astype({
+        'school_input_id_at': 'string',
+        'school_id_at': 'string',
+        'include_school_in_data': 'bool',
+        'include_school_in_reporting': 'bool',
+        'school_data_pending': 'bool'
+    })
+    school_inputs_df.set_index('school_input_id_at', inplace=True)
+    return school_inputs_df
