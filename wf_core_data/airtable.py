@@ -203,6 +203,78 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return school_data
 
+    def fetch_hub_data(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=SCHOOLS_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching hub data from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='Hubs',
+            params=params
+        )
+        hub_data=list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('hub_id_at', record.get('id')),
+                ('hub_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('hub_name_at', fields.get('Name'))
+            ])
+            hub_data.append(datum)
+        if format == 'dataframe':
+            hub_data = convert_hub_data_to_df(hub_data)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return hub_data
+
+    def fetch_pod_data(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=SCHOOLS_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching pod data from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='Pods',
+            params=params
+        )
+        pod_data=list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('pod_id_at', record.get('id')),
+                ('pod_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('pod_name_at', fields.get('Name'))
+            ])
+            pod_data.append(datum)
+        if format == 'dataframe':
+            pod_data = convert_pod_data_to_df(pod_data)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return pod_data
+
     def bulk_get(
         self,
         base_id,
@@ -370,3 +442,35 @@ def convert_school_data_to_df(school_data):
     })
     school_data_df.set_index('school_id_at', inplace=True)
     return school_data_df
+
+def convert_hub_data_to_df(hub_data):
+    if len(hub_data) == 0:
+        return pd.DataFrame()
+    hub_data_df = pd.DataFrame(
+        hub_data,
+        dtype='object'
+    )
+    hub_data_df['pull_datetime'] = pd.to_datetime(hub_data_df['pull_datetime'])
+    hub_data_df['hub_created_datetime_at'] = pd.to_datetime(hub_data_df['hub_created_datetime_at'])
+    hub_data_df = hub_data_df.astype({
+        'hub_id_at': 'string',
+        'hub_name_at': 'string'
+    })
+    hub_data_df.set_index('hub_id_at', inplace=True)
+    return hub_data_df
+
+def convert_pod_data_to_df(pod_data):
+    if len(pod_data) == 0:
+        return pd.DataFrame()
+    pod_data_df = pd.DataFrame(
+        pod_data,
+        dtype='object'
+    )
+    pod_data_df['pull_datetime'] = pd.to_datetime(pod_data_df['pull_datetime'])
+    pod_data_df['pod_created_datetime_at'] = pd.to_datetime(pod_data_df['pod_created_datetime_at'])
+    pod_data_df = pod_data_df.astype({
+        'pod_id_at': 'string',
+        'pod_name_at': 'string'
+    })
+    pod_data_df.set_index('pod_id_at', inplace=True)
+    return pod_data_df
