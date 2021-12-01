@@ -183,8 +183,8 @@ class AirtableClient:
                 ('school_id_at', record.get('id')),
                 ('school_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
                 ('pull_datetime', pull_datetime),
-                ('hub_at', fields.get('Hub')),
-                ('pod_at', fields.get('Pod')),
+                ('hub_id_at', fields.get('Hub')),
+                ('pod_id_at', fields.get('Pod')),
                 ('school_name_at', fields.get('Name')),
                 ('school_short_name_at', fields.get('Short Name')),
                 ('school_status_at', fields.get('School Status')),
@@ -355,13 +355,13 @@ def convert_school_data_to_df(school_data):
     )
     school_data_df['pull_datetime'] = pd.to_datetime(school_data_df['pull_datetime'])
     school_data_df['school_created_datetime_at'] = pd.to_datetime(school_data_df['school_created_datetime_at'])
-    school_data_df['hub_at'] = school_data_df['hub_at'].apply(wf_core_data.utils.to_singleton)
-    school_data_df['pod_at'] = school_data_df['pod_at'].apply(wf_core_data.utils.to_singleton)
+    school_data_df['hub_id_at'] = school_data_df['hub_id_at'].apply(wf_core_data.utils.to_singleton)
+    school_data_df['pod_id_at'] = school_data_df['pod_id_at'].apply(wf_core_data.utils.to_singleton)
     school_data_df['school_id_tc'] = pd.to_numeric(school_data_df['school_id_tc']).astype('Int64')
     school_data_df = school_data_df.astype({
         'school_id_at': 'string',
-        'hub_at': 'string',
-        'pod_at': 'string',
+        'hub_id_at': 'string',
+        'pod_id_at': 'string',
         'school_name_at': 'string',
         'school_short_name_at': 'string',
         'school_status_at': 'string',
