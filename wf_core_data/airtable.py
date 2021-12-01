@@ -186,13 +186,12 @@ class AirtableClient:
                 ('hub_at', fields.get('Hub')),
                 ('pod_at', fields.get('Pod')),
                 ('school_name_at', fields.get('Name')),
+                ('school_short_name_at', fields.get('Short Name')),
                 ('school_status_at', fields.get('School Status')),
                 ('school_ssj_stage_at', fields.get('School Startup Stage')),
                 ('school_governance_model_at', fields.get('Governance Model')),
                 ('school_ages_served_at', fields.get('Ages served')),
-                ('school_phone_number_at', fields.get('School Phone')),
                 ('school_location_ids_at', fields.get('Locations')),
-                ('school_time_zone_at', fields.get('Time Zone')),
                 ('school_id_tc', fields.get('TC_school_ID'))
             ])
             school_data.append(datum)
@@ -364,11 +363,10 @@ def convert_school_data_to_df(school_data):
         'hub_at': 'string',
         'pod_at': 'string',
         'school_name_at': 'string',
+        'school_short_name_at': 'string',
         'school_status_at': 'string',
         'school_ssj_stage_at': 'string',
         'school_governance_model_at': 'string',
-        'school_phone_number_at': 'string',
-        'school_time_zone_at': 'string',
     })
     school_data_df.set_index('school_id_at', inplace=True)
     return school_data_df
