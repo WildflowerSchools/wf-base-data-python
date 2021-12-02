@@ -316,6 +316,44 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return school_inputs
 
+    def fetch_family_survey_hub_inputs(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=SCHOOLS_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching family survey hub inputs from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='Family survey - hub inputs',
+            params=params
+        )
+        hub_inputs=list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('hub_input_id_at', record.get('id')),
+                ('hub_input_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('hub_id_at', fields.get('Hubs')),
+                ('include_hub_in_reporting', fields.get('Include in reporting')),
+                ('hub_data_pending', fields.get('Data pending'))
+            ])
+            hub_inputs.append(datum)
+        if format == 'dataframe':
+            hub_inputs = convert_hub_inputs_to_df(hub_inputs)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return hub_inputs
+
     def write_dataframe(
         self,
         df,
@@ -572,3 +610,22 @@ def convert_school_inputs_to_df(school_inputs):
     })
     school_inputs_df.set_index('school_input_id_at', inplace=True)
     return school_inputs_df
+
+def convert_hub_inputs_to_df(hub_inputs):
+    if len(hub_inputs) == 0:
+        return pd.DataFrame()
+    hub_inputs_df = pd.DataFrame(
+        hub_inputs,
+        dtype='object'
+    )
+    hub_inputs_df['pull_datetime'] = pd.to_datetime(hub_inputs_df['pull_datetime'])
+    hub_inputs_df['hub_input_created_datetime_at'] = pd.to_datetime(hub_inputs_df['hub_input_created_datetime_at'])
+    hub_inputs_df['hub_id_at'] = hub_inputs_df['hub_id_at'].apply(wf_core_data.utils.to_singleton)
+    hub_inputs_df = hub_inputs_df.astype({
+        'hub_input_id_at': 'string',
+        'hub_id_at': 'string',
+        'include_hub_in_reporting': 'bool',
+        'hub_data_pending': 'bool'
+    })
+    hub_inputs_df.set_index('hub_input_id_at', inplace=True)
+    return hub_inputs_df
