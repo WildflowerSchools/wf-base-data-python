@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_DELAY = 0.25
 DEFAULT_MAX_REQUESTS = 50
+DEFAULT_WRITE_CHUNK_SIZE = 10
 
 SCHOOLS_BASE_ID = 'appJBT9a4f3b7hWQ2'
 
@@ -314,6 +315,43 @@ class AirtableClient:
         else:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return school_inputs
+
+    def write_dataframe(
+        self,
+        df,
+        base_id,
+        endpoint,
+        params=None,
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS,
+        write_chunk_size=DEFAULT_WRITE_CHUNK_SIZE
+    ):
+        num_records = len(df)
+        num_chunks = (num_records // write_chunk_size) + 1
+        logger.info('Writing {} records in {} chunks'.format(
+            num_records,
+            num_chunks
+        ))
+        for chunk_index in range(num_chunks):
+            start_row_index = chunk_index*write_chunk_size
+            end_row_index = min(
+                (chunk_index + 1)*write_chunk_size,
+                num_records
+            )
+            chunk_df = df.iloc[start_row_index:end_row_index]
+            chunk_list = chunk_df.to_dict(orient='records')
+            chunk_dict = {'records': [{'fields': row_dict} for row_dict in chunk_list]}
+            logger.info('Writing chunk {}: rows {} to {}'.format(
+                chunk_index,
+                start_row_index,
+                end_row_index
+            ))
+            self.post(
+                base_id=base_id,
+                endpoint=endpoint,
+                data=chunk_dict
+            )
+            time.sleep(delay)
 
     def bulk_get(
         self,
