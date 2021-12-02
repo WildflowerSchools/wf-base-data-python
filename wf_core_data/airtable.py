@@ -428,6 +428,43 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return excluded_student_inputs
 
+    def fetch_family_survey_field_name_inputs(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=SCHOOLS_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching family survey field name inputs from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='Family survey - field name inputs',
+            params=params
+        )
+        field_name_inputs = list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('field_name_input_id_at', record.get('id')),
+                ('field_name_input_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('source_field_name', fields.get('Source field name')),
+                ('target_field_name', fields.get('Target field name'))
+            ])
+            field_name_inputs.append(datum)
+        if format == 'dataframe':
+            field_name_inputs = convert_field_name_inputs_to_df(field_name_inputs)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return field_name_inputs
+
     def write_dataframe(
         self,
         df,
@@ -739,3 +776,20 @@ def convert_excluded_student_inputs_to_df(excluded_student_inputs):
     })
     excluded_student_inputs_df.set_index('excluded_student_input_id_at', inplace=True)
     return excluded_student_inputs_df
+
+def convert_field_name_inputs_to_df(field_name_inputs):
+    if len(field_name_inputs) == 0:
+        return pd.DataFrame()
+    field_name_inputs_df = pd.DataFrame(
+        field_name_inputs,
+        dtype='object'
+    )
+    field_name_inputs_df['pull_datetime'] = pd.to_datetime(field_name_inputs_df['pull_datetime'])
+    field_name_inputs_df['field_name_input_created_datetime_at'] = pd.to_datetime(field_name_inputs_df['field_name_input_created_datetime_at'])
+    field_name_inputs_df = field_name_inputs_df.astype({
+        'field_name_input_id_at': 'string',
+        'source_field_name': 'string',
+        'target_field_name': 'string'
+    })
+    field_name_inputs_df.set_index('field_name_input_id_at', inplace=True)
+    return field_name_inputs_df
