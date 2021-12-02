@@ -391,6 +391,43 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return excluded_classroom_inputs
 
+    def fetch_family_survey_excluded_student_inputs(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=SCHOOLS_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching family survey excluded student inputs from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='Family survey - excluded student inputs',
+            params=params
+        )
+        excluded_student_inputs = list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('excluded_student_input_id_at', record.get('id')),
+                ('excluded_student_input_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('school_id_at', fields.get('Schools')),
+                ('student_id_tc', fields.get('TC student ID'))
+            ])
+            excluded_student_inputs.append(datum)
+        if format == 'dataframe':
+            excluded_student_inputs = convert_excluded_student_inputs_to_df(excluded_student_inputs)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return excluded_student_inputs
+
     def write_dataframe(
         self,
         df,
@@ -684,3 +721,21 @@ def convert_excluded_classroom_inputs_to_df(excluded_classroom_inputs):
     })
     excluded_classroom_inputs_df.set_index('excluded_classroom_input_id_at', inplace=True)
     return excluded_classroom_inputs_df
+
+def convert_excluded_student_inputs_to_df(excluded_student_inputs):
+    if len(excluded_student_inputs) == 0:
+        return pd.DataFrame()
+    excluded_student_inputs_df = pd.DataFrame(
+        excluded_student_inputs,
+        dtype='object'
+    )
+    excluded_student_inputs_df['pull_datetime'] = pd.to_datetime(excluded_student_inputs_df['pull_datetime'])
+    excluded_student_inputs_df['excluded_student_input_created_datetime_at'] = pd.to_datetime(excluded_student_inputs_df['excluded_student_input_created_datetime_at'])
+    excluded_student_inputs_df['school_id_at'] = excluded_student_inputs_df['school_id_at'].apply(wf_core_data.utils.to_singleton)
+    excluded_student_inputs_df = excluded_student_inputs_df.astype({
+        'excluded_student_input_id_at': 'string',
+        'school_id_at': 'string',
+        'student_id_tc': 'Int64'
+    })
+    excluded_student_inputs_df.set_index('excluded_student_input_id_at', inplace=True)
+    return excluded_student_inputs_df
