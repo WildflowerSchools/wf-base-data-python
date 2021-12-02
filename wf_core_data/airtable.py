@@ -193,7 +193,7 @@ class AirtableClient:
                 ('school_governance_model_at', fields.get('Governance Model')),
                 ('school_ages_served_at', fields.get('Ages served')),
                 ('school_location_ids_at', fields.get('Locations')),
-                ('school_id_tc', fields.get('TC_school_ID'))
+                ('school_id_tc', fields.get('TC school ID'))
             ])
             school_data.append(datum)
         if format == 'dataframe':
