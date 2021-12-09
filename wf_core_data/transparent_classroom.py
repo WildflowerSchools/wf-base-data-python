@@ -1012,6 +1012,17 @@ class TransparentClassroomClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return school_data
 
+    def fetch_network_form_template_data(
+        self,
+    ):
+        logger.info('Fetching network form template data from Transparent Classroom')
+        json_output = self.transparent_classroom_request('form_templates.json')
+        if not isinstance(json_output, list):
+            raise ValueError('Received unexpected response from Transparent Classroom: {}'.format(
+                json_output
+            ))
+        return json_output
+
     def transparent_classroom_request(
         self,
         endpoint,
