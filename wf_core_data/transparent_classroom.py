@@ -1014,14 +1014,34 @@ class TransparentClassroomClient:
 
     def fetch_network_form_template_data(
         self,
+        pull_datetime=None,
+        format='dataframe'
     ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
         logger.info('Fetching network form template data from Transparent Classroom')
         json_output = self.transparent_classroom_request('form_templates.json')
         if not isinstance(json_output, list):
             raise ValueError('Received unexpected response from Transparent Classroom: {}'.format(
                 json_output
             ))
-        return json_output
+        network_form_template_data = list()
+        for datum in json_output:
+            network_form_template_datum = OrderedDict([
+                ('network_template_id_tc', datum.get('id')),
+                ('pull_datetime', pull_datetime),
+                ('network_template_name', datum.get('name')),
+                ('widgets', datum.get('widgets'))
+            ])
+            network_form_template_data.append(network_form_template_datum)
+        if format == 'dataframe':
+            network_form_template_data = convert_network_form_template_data_to_df(network_form_template_data)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return network_form_template_data
 
     def transparent_classroom_request(
         self,
@@ -1437,3 +1457,18 @@ def convert_student_parent_data_to_df(student_parent_data):
     })
     student_parent_data_df.set_index(['school_id_tc', 'student_id_tc', 'parent_id_tc'], inplace=True)
     return student_parent_data_df
+
+def convert_network_form_template_data_to_df(network_template_data):
+    if len(network_template_data) == 0:
+        return pd.DataFrame()
+    network_template_data_df = pd.DataFrame(
+        network_template_data,
+        dtype='object'
+    )
+    network_template_data_df['pull_datetime'] = pd.to_datetime(network_template_data_df['pull_datetime'])
+    network_template_data_df = network_template_data_df.astype({
+            'network_template_id_tc': 'int',
+            'network_template_name': 'string'
+    })
+    network_template_data_df.set_index('network_template_id_tc', inplace=True)
+    return network_template_data_df
