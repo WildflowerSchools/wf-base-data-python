@@ -1043,6 +1043,74 @@ class TransparentClassroomClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return network_form_template_data
 
+    def fetch_form_template_data(
+        self,
+        school_ids=None,
+        pull_datetime=None,
+        format='dataframe'
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        if school_ids is None:
+            school_ids=self.fetch_school_ids()
+        logger.info('Fetching form template data from Transparent Classroom for {} schools'.format(len(school_ids)))
+        form_template_data = list()
+        for school_id in school_ids:
+            form_template_data_school = self.fetch_form_template_data_school(
+                school_id=school_id,
+                pull_datetime=pull_datetime,
+                format='list'
+            )
+            form_template_data.extend(form_template_data_school)
+        if format == 'dataframe':
+            form_template_data = convert_form_template_data_to_df(form_template_data)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return form_template_data
+
+    def fetch_form_template_data_school(
+        self,
+        school_id,
+        pull_datetime=None,
+        format='dataframe'
+    ):
+        if school_id is not None:
+            school_id = int(school_id)
+            logger.info('Fetching form template data from Transparent Classroom for school ID {}'.format(school_id))
+        else:
+            logger.info('Fetching form template data from Transparent Classroom for network')
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        json_output = self.transparent_classroom_request(
+            'form_templates.json',
+            school_id=school_id
+        )
+        if not isinstance(json_output, list):
+            raise ValueError('Received unexpected response from Transparent Classroom: {}'.format(
+                json_output
+            ))
+        form_template_data = list()
+        for datum in json_output:
+            form_template_datum = OrderedDict([
+                ('school_id_tc', school_id),
+                ('form_template_id_tc', datum.get('id')),
+                ('pull_datetime', pull_datetime),
+                ('form_template_name', datum.get('name')),
+                ('widgets', datum.get('widgets'))
+            ])
+            form_template_data.append(form_template_datum)
+        if format == 'dataframe':
+            form_template_data = convert_form_template_data_to_df(form_template_data)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return form_template_data
+
     def transparent_classroom_request(
         self,
         endpoint,
@@ -1472,3 +1540,19 @@ def convert_network_form_template_data_to_df(network_template_data):
     })
     network_template_data_df.set_index('network_template_id_tc', inplace=True)
     return network_template_data_df
+
+def convert_form_template_data_to_df(form_template_data):
+    if len(form_template_data) == 0:
+        return pd.DataFrame()
+    form_template_data_df = pd.DataFrame(
+        form_template_data,
+        dtype='object'
+    )
+    form_template_data_df['pull_datetime'] = pd.to_datetime(form_template_data_df['pull_datetime'])
+    form_template_data_df = form_template_data_df.astype({
+            'school_id_tc': 'Int64',
+            'form_template_id_tc': 'int',
+            'form_template_name': 'string'
+    })
+    form_template_data_df.set_index(['school_id_tc', 'form_template_id_tc'], inplace=True)
+    return form_template_data_df
