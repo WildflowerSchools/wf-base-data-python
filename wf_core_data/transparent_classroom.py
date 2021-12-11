@@ -1099,6 +1099,78 @@ class TransparentClassroomClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return form_template_data
 
+    def fetch_form_data(
+        self,
+        school_ids=None,
+        pull_datetime=None,
+        format='dataframe'
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        if school_ids is None:
+            school_ids=self.fetch_school_ids()
+        logger.info('Fetching form data from Transparent Classroom for {} schools'.format(len(school_ids)))
+        form_data = list()
+        for school_id in school_ids:
+            form_data_school = self.fetch_form_data_school(
+                school_id=school_id,
+                pull_datetime=pull_datetime,
+                format='list'
+            )
+            form_data.extend(form_data_school)
+        if format == 'dataframe':
+            form_data = convert_form_data_to_df(form_data)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return form_data
+
+    def fetch_form_data_school(
+        self,
+        school_id,
+        pull_datetime=None,
+        format='dataframe'
+    ):
+        school_id = int(school_id)
+        logger.info('Fetching form template data from Transparent Classroom for school ID {}'.format(school_id))
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        json_output = self.transparent_classroom_request(
+            'forms.json',
+            school_id=school_id
+        )
+        if not isinstance(json_output, list):
+            raise ValueError('Received unexpected response from Transparent Classroom: {}'.format(
+                json_output
+            ))
+        form_data = json_output
+        form_data = list()
+        for datum in json_output:
+            form_datum = OrderedDict([
+                ('school_id_tc', school_id),
+                ('form_id_tc', datum.get('id')),
+                ('form_template_id_tc', datum.get('form_template_id')),
+                ('pull_datetime', pull_datetime),
+                ('form_state', datum.get('state')),
+                ('form_created_at', datum.get('created_at')),
+                ('form_updated_at', datum.get('updated_at')),
+                ('form_last_emailed_at', datum.get('last_emailed_at')),
+                ('form_due_date', datum.get('due_date')),
+                ('parent_form_id_tc', datum.get('parent_form_id')),
+                ('form_fields', datum.get('fields'))
+            ])
+            form_data.append(form_datum)
+        if format == 'dataframe':
+            form_data = convert_form_data_to_df(form_data)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return form_data
+
     def transparent_classroom_request(
         self,
         endpoint,
@@ -1529,3 +1601,25 @@ def convert_form_template_data_to_df(form_template_data):
     })
     form_template_data_df.set_index(['school_id_tc', 'form_template_id_tc'], inplace=True)
     return form_template_data_df
+
+def convert_form_data_to_df(form_data):
+    if len(form_data) == 0:
+        return pd.DataFrame()
+    form_data_df = pd.DataFrame(
+        form_data,
+        dtype='object'
+    )
+    form_data_df['pull_datetime'] = pd.to_datetime(form_data_df['pull_datetime'])
+    form_data_df['form_created_at'] = pd.to_datetime(form_data_df['form_created_at'])
+    form_data_df['form_updated_at'] = pd.to_datetime(form_data_df['form_updated_at'])
+    form_data_df['form_last_emailed_at'] = pd.to_datetime(form_data_df['form_last_emailed_at'])
+    form_data_df['form_due_date'] = pd.to_datetime(form_data_df['form_due_date'])
+    form_data_df = form_data_df.astype({
+            'school_id_tc': 'int',
+            'form_id_tc': 'int',
+            'form_template_id_tc': 'int',
+            'form_state': 'string',
+            'parent_form_id_tc': 'Int64'
+    })
+    form_data_df.set_index(['school_id_tc', 'form_id_tc'], inplace=True)
+    return form_data_df
