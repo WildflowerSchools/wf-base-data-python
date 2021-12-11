@@ -1103,6 +1103,7 @@ class TransparentClassroomClient:
         self,
         school_ids=None,
         pull_datetime=None,
+        form_template_id=None,
         format='dataframe'
     ):
         pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
@@ -1116,6 +1117,7 @@ class TransparentClassroomClient:
             form_data_school = self.fetch_form_data_school(
                 school_id=school_id,
                 pull_datetime=pull_datetime,
+                form_template_id=form_template_id,
                 format='list'
             )
             form_data.extend(form_data_school)
@@ -1131,6 +1133,7 @@ class TransparentClassroomClient:
         self,
         school_id,
         pull_datetime=None,
+        form_template_id=None,
         format='dataframe'
     ):
         school_id = int(school_id)
@@ -1140,7 +1143,10 @@ class TransparentClassroomClient:
             pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
         json_output = self.transparent_classroom_request(
             'forms.json',
-            school_id=school_id
+            school_id=school_id,
+            params={
+                'form_template_id': form_template_id
+            }
         )
         if not isinstance(json_output, list):
             raise ValueError('Received unexpected response from Transparent Classroom: {}'.format(
