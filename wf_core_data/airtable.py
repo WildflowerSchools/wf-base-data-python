@@ -388,6 +388,43 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return household_income_categories
 
+    def fetch_nps_categories(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=DATA_DICT_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching NPS categories from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='NPS categories',
+            params=params
+        )
+        nps_categories=list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('nps_category_id_at', record.get('id')),
+                ('nps_category_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('nps_category', fields.get('nps_category')),
+                ('nps_display_name_english', fields.get('nps_display_name_english')),
+                ('nps_display_name_spanish', fields.get('nps_display_name_spanish'))            ])
+            nps_categories.append(datum)
+        if format == 'dataframe':
+            nps_categories = convert_nps_categories_to_df(nps_categories)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return nps_categories
+
     def write_dataframe(
         self,
         df,
@@ -678,3 +715,21 @@ def convert_household_income_categories_to_df(household_income_categories):
     })
     household_income_categories_df.set_index('household_income_category', inplace=True)
     return household_income_categories_df
+
+def convert_nps_categories_to_df(nps_categories):
+    if len(nps_categories) == 0:
+        return pd.DataFrame()
+    nps_categories_df = pd.DataFrame(
+        nps_categories,
+        dtype='object'
+    )
+    nps_categories_df['pull_datetime'] = pd.to_datetime(nps_categories_df['pull_datetime'])
+    nps_categories_df['nps_category_created_datetime_at'] = pd.to_datetime(nps_categories_df['nps_category_created_datetime_at'])
+    nps_categories_df = nps_categories_df.astype({
+        'nps_category_id_at': 'string',
+        'nps_category': 'string',
+        'nps_display_name_english': 'string',
+        'nps_display_name_spanish': 'string'
+    })
+    nps_categories_df.set_index('nps_category', inplace=True)
+    return nps_categories_df
