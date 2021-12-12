@@ -610,6 +610,43 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return nps_mapping
 
+    def fetch_boolean_mapping(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=DATA_DICT_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching boolean mapping from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='Boolean mapping',
+            params=params
+        )
+        boolean_mapping=list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('boolean_mapping_id_at', record.get('id')),
+                ('boolean_mapping_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('boolean_response', fields.get('boolean_response')),
+                ('boolean_category_id_at', fields.get('boolean_category'))
+            ])
+            boolean_mapping.append(datum)
+        if format == 'dataframe':
+            boolean_mapping = convert_boolean_mapping_to_df(boolean_mapping)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return boolean_mapping
+
     def write_dataframe(
         self,
         df,
@@ -1008,3 +1045,21 @@ def convert_nps_mapping_to_df(nps_mapping):
     })
     nps_mapping_df.set_index('nps_response', inplace=True)
     return nps_mapping_df
+
+def convert_boolean_mapping_to_df(boolean_mapping):
+    if len(boolean_mapping) == 0:
+        return pd.DataFrame()
+    boolean_mapping_df = pd.DataFrame(
+        boolean_mapping,
+        dtype='object'
+    )
+    boolean_mapping_df['pull_datetime'] = pd.to_datetime(boolean_mapping_df['pull_datetime'])
+    boolean_mapping_df['boolean_mapping_created_datetime_at'] = pd.to_datetime(boolean_mapping_df['boolean_mapping_created_datetime_at'])
+    boolean_mapping_df['boolean_category_id_at'] = boolean_mapping_df['boolean_category_id_at'].apply(wf_core_data.utils.to_singleton)
+    boolean_mapping_df = boolean_mapping_df.astype({
+        'boolean_mapping_id_at': 'string',
+        'boolean_response': 'string',
+        'boolean_category_id_at': 'string'
+    })
+    boolean_mapping_df.set_index('boolean_response', inplace=True)
+    return boolean_mapping_df
