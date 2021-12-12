@@ -16,6 +16,7 @@ DEFAULT_MAX_REQUESTS = 50
 DEFAULT_WRITE_CHUNK_SIZE = 10
 
 SCHOOLS_BASE_ID = 'appJBT9a4f3b7hWQ2'
+DATA_DICT_BASE_ID = 'appHMyIWgnHqVJymL'
 
 class AirtableClient:
     def __init__(
@@ -276,6 +277,43 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return pod_data
 
+    def fetch_ethnicity_categories(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=DATA_DICT_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching ethnicity categories from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='Ethnicity categories',
+            params=params
+        )
+        ethnicity_categories=list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('ethnicity_category_id_at', record.get('id')),
+                ('ethnicity_category_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('ethnicity_category', fields.get('ethnicity_category')),
+                ('ethnicity_display_name_english', fields.get('ethnicity_display_name_english')),
+                ('ethnicity_display_name_spanish', fields.get('ethnicity_display_name_spanish'))            ])
+            ethnicity_categories.append(datum)
+        if format == 'dataframe':
+            ethnicity_categories = convert_ethnicity_categories_to_df(ethnicity_categories)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return ethnicity_categories
+
     def write_dataframe(
         self,
         df,
@@ -512,3 +550,21 @@ def convert_pod_data_to_df(pod_data):
     })
     pod_data_df.set_index('pod_id_at', inplace=True)
     return pod_data_df
+
+def convert_ethnicity_categories_to_df(ethnicity_categories):
+    if len(ethnicity_categories) == 0:
+        return pd.DataFrame()
+    ethnicity_categories_df = pd.DataFrame(
+        ethnicity_categories,
+        dtype='object'
+    )
+    ethnicity_categories_df['pull_datetime'] = pd.to_datetime(ethnicity_categories_df['pull_datetime'])
+    ethnicity_categories_df['ethnicity_category_created_datetime_at'] = pd.to_datetime(ethnicity_categories_df['ethnicity_category_created_datetime_at'])
+    ethnicity_categories_df = ethnicity_categories_df.astype({
+        'ethnicity_category_id_at': 'string',
+        'ethnicity_category': 'string',
+        'ethnicity_display_name_english': 'string',
+        'ethnicity_display_name_spanish': 'string'
+    })
+    ethnicity_categories_df.set_index('ethnicity_category', inplace=True)
+    return ethnicity_categories_df
