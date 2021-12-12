@@ -536,6 +536,43 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return gender_mapping
 
+    def fetch_household_income_mapping(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=DATA_DICT_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching household income mapping from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='Household income mapping',
+            params=params
+        )
+        household_income_mapping=list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('household_income_mapping_id_at', record.get('id')),
+                ('household_income_mapping_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('household_income_response', fields.get('household_income_response')),
+                ('household_income_category_id_at', fields.get('household_income_category'))
+            ])
+            household_income_mapping.append(datum)
+        if format == 'dataframe':
+            household_income_mapping = convert_household_income_mapping_to_df(household_income_mapping)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return household_income_mapping
+
     def write_dataframe(
         self,
         df,
@@ -898,3 +935,21 @@ def convert_gender_mapping_to_df(gender_mapping):
     })
     gender_mapping_df.set_index('gender_response', inplace=True)
     return gender_mapping_df
+
+def convert_household_income_mapping_to_df(household_income_mapping):
+    if len(household_income_mapping) == 0:
+        return pd.DataFrame()
+    household_income_mapping_df = pd.DataFrame(
+        household_income_mapping,
+        dtype='object'
+    )
+    household_income_mapping_df['pull_datetime'] = pd.to_datetime(household_income_mapping_df['pull_datetime'])
+    household_income_mapping_df['household_income_mapping_created_datetime_at'] = pd.to_datetime(household_income_mapping_df['household_income_mapping_created_datetime_at'])
+    household_income_mapping_df['household_income_category_id_at'] = household_income_mapping_df['household_income_category_id_at'].apply(wf_core_data.utils.to_singleton)
+    household_income_mapping_df = household_income_mapping_df.astype({
+        'household_income_mapping_id_at': 'string',
+        'household_income_response': 'string',
+        'household_income_category_id_at': 'string'
+    })
+    household_income_mapping_df.set_index('household_income_response', inplace=True)
+    return household_income_mapping_df
