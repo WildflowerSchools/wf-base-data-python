@@ -462,6 +462,43 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return boolean_categories
 
+    def fetch_ethnicity_mapping(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=DATA_DICT_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching ethnicity mapping from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='Ethnicity mapping',
+            params=params
+        )
+        ethnicity_mapping=list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('ethnicity_mapping_id_at', record.get('id')),
+                ('ethnicity_mapping_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('ethnicity_response', fields.get('ethnicity_response')),
+                ('ethnicity_category_id_at', fields.get('ethnicity_category'))
+            ])
+            ethnicity_mapping.append(datum)
+        if format == 'dataframe':
+            ethnicity_mapping = convert_ethnicity_mapping_to_df(ethnicity_mapping)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return ethnicity_mapping
+
     def write_dataframe(
         self,
         df,
@@ -788,3 +825,21 @@ def convert_boolean_categories_to_df(boolean_categories):
     })
     boolean_categories_df.set_index('boolean_category', inplace=True)
     return boolean_categories_df
+
+def convert_ethnicity_mapping_to_df(ethnicity_mapping):
+    if len(ethnicity_mapping) == 0:
+        return pd.DataFrame()
+    ethnicity_mapping_df = pd.DataFrame(
+        ethnicity_mapping,
+        dtype='object'
+    )
+    ethnicity_mapping_df['pull_datetime'] = pd.to_datetime(ethnicity_mapping_df['pull_datetime'])
+    ethnicity_mapping_df['ethnicity_mapping_created_datetime_at'] = pd.to_datetime(ethnicity_mapping_df['ethnicity_mapping_created_datetime_at'])
+    ethnicity_mapping_df['ethnicity_category_id_at'] = ethnicity_mapping_df['ethnicity_category_id_at'].apply(wf_core_data.utils.to_singleton)
+    ethnicity_mapping_df = ethnicity_mapping_df.astype({
+        'ethnicity_mapping_id_at': 'string',
+        'ethnicity_response': 'string',
+        'ethnicity_category_id_at': 'string'
+    })
+    ethnicity_mapping_df.set_index('ethnicity_response', inplace=True)
+    return ethnicity_mapping_df
