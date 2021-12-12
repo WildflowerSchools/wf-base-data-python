@@ -899,7 +899,7 @@ def convert_ethnicity_categories_to_df(ethnicity_categories):
         'ethnicity_display_name_english': 'string',
         'ethnicity_display_name_spanish': 'string'
     })
-    ethnicity_categories_df.set_index('ethnicity_category', inplace=True)
+    ethnicity_categories_df.set_index('ethnicity_category_id_at', inplace=True)
     return ethnicity_categories_df
 
 def convert_gender_categories_to_df(gender_categories):
@@ -917,7 +917,7 @@ def convert_gender_categories_to_df(gender_categories):
         'gender_display_name_english': 'string',
         'gender_display_name_spanish': 'string'
     })
-    gender_categories_df.set_index('gender_category', inplace=True)
+    gender_categories_df.set_index('gender_category_id_at', inplace=True)
     return gender_categories_df
 
 def convert_household_income_categories_to_df(household_income_categories):
@@ -935,7 +935,7 @@ def convert_household_income_categories_to_df(household_income_categories):
         'household_income_display_name_english': 'string',
         'household_income_display_name_spanish': 'string'
     })
-    household_income_categories_df.set_index('household_income_category', inplace=True)
+    household_income_categories_df.set_index('household_income_category_id_at', inplace=True)
     return household_income_categories_df
 
 def convert_nps_categories_to_df(nps_categories):
@@ -953,7 +953,7 @@ def convert_nps_categories_to_df(nps_categories):
         'nps_display_name_english': 'string',
         'nps_display_name_spanish': 'string'
     })
-    nps_categories_df.set_index('nps_category', inplace=True)
+    nps_categories_df.set_index('nps_category_id_at', inplace=True)
     return nps_categories_df
 
 def convert_boolean_categories_to_df(boolean_categories):
@@ -971,7 +971,7 @@ def convert_boolean_categories_to_df(boolean_categories):
         'boolean_display_name_english': 'string',
         'boolean_display_name_spanish': 'string'
     })
-    boolean_categories_df.set_index('boolean_category', inplace=True)
+    boolean_categories_df.set_index('boolean_category_id_at', inplace=True)
     return boolean_categories_df
 
 def convert_ethnicity_mapping_to_df(ethnicity_mapping):
