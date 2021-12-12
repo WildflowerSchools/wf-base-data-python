@@ -499,6 +499,43 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return ethnicity_mapping
 
+    def fetch_gender_mapping(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=DATA_DICT_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching gender mapping from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='Gender mapping',
+            params=params
+        )
+        gender_mapping=list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('gender_mapping_id_at', record.get('id')),
+                ('gender_mapping_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('gender_response', fields.get('gender_response')),
+                ('gender_category_id_at', fields.get('gender_category'))
+            ])
+            gender_mapping.append(datum)
+        if format == 'dataframe':
+            gender_mapping = convert_gender_mapping_to_df(gender_mapping)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return gender_mapping
+
     def write_dataframe(
         self,
         df,
@@ -843,3 +880,21 @@ def convert_ethnicity_mapping_to_df(ethnicity_mapping):
     })
     ethnicity_mapping_df.set_index('ethnicity_response', inplace=True)
     return ethnicity_mapping_df
+
+def convert_gender_mapping_to_df(gender_mapping):
+    if len(gender_mapping) == 0:
+        return pd.DataFrame()
+    gender_mapping_df = pd.DataFrame(
+        gender_mapping,
+        dtype='object'
+    )
+    gender_mapping_df['pull_datetime'] = pd.to_datetime(gender_mapping_df['pull_datetime'])
+    gender_mapping_df['gender_mapping_created_datetime_at'] = pd.to_datetime(gender_mapping_df['gender_mapping_created_datetime_at'])
+    gender_mapping_df['gender_category_id_at'] = gender_mapping_df['gender_category_id_at'].apply(wf_core_data.utils.to_singleton)
+    gender_mapping_df = gender_mapping_df.astype({
+        'gender_mapping_id_at': 'string',
+        'gender_response': 'string',
+        'gender_category_id_at': 'string'
+    })
+    gender_mapping_df.set_index('gender_response', inplace=True)
+    return gender_mapping_df
