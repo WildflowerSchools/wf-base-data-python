@@ -351,6 +351,43 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return gender_categories
 
+    def fetch_household_income_categories(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=DATA_DICT_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching household income categories from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='Household income categories',
+            params=params
+        )
+        household_income_categories=list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('household_income_category_id_at', record.get('id')),
+                ('household_income_category_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('household_income_category', fields.get('household_income_category')),
+                ('household_income_display_name_english', fields.get('household_income_display_name_english')),
+                ('household_income_display_name_spanish', fields.get('household_income_display_name_spanish'))            ])
+            household_income_categories.append(datum)
+        if format == 'dataframe':
+            household_income_categories = convert_household_income_categories_to_df(household_income_categories)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return household_income_categories
+
     def write_dataframe(
         self,
         df,
@@ -623,3 +660,21 @@ def convert_gender_categories_to_df(gender_categories):
     })
     gender_categories_df.set_index('gender_category', inplace=True)
     return gender_categories_df
+
+def convert_household_income_categories_to_df(household_income_categories):
+    if len(household_income_categories) == 0:
+        return pd.DataFrame()
+    household_income_categories_df = pd.DataFrame(
+        household_income_categories,
+        dtype='object'
+    )
+    household_income_categories_df['pull_datetime'] = pd.to_datetime(household_income_categories_df['pull_datetime'])
+    household_income_categories_df['household_income_category_created_datetime_at'] = pd.to_datetime(household_income_categories_df['household_income_category_created_datetime_at'])
+    household_income_categories_df = household_income_categories_df.astype({
+        'household_income_category_id_at': 'string',
+        'household_income_category': 'string',
+        'household_income_display_name_english': 'string',
+        'household_income_display_name_spanish': 'string'
+    })
+    household_income_categories_df.set_index('household_income_category', inplace=True)
+    return household_income_categories_df
