@@ -573,6 +573,43 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return household_income_mapping
 
+    def fetch_nps_mapping(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=DATA_DICT_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching NPS mapping from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='NPS mapping',
+            params=params
+        )
+        nps_mapping=list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('nps_mapping_id_at', record.get('id')),
+                ('nps_mapping_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('nps_response', fields.get('nps_response')),
+                ('nps_category_id_at', fields.get('nps_category'))
+            ])
+            nps_mapping.append(datum)
+        if format == 'dataframe':
+            nps_mapping = convert_nps_mapping_to_df(nps_mapping)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return nps_mapping
+
     def write_dataframe(
         self,
         df,
@@ -953,3 +990,21 @@ def convert_household_income_mapping_to_df(household_income_mapping):
     })
     household_income_mapping_df.set_index('household_income_response', inplace=True)
     return household_income_mapping_df
+
+def convert_nps_mapping_to_df(nps_mapping):
+    if len(nps_mapping) == 0:
+        return pd.DataFrame()
+    nps_mapping_df = pd.DataFrame(
+        nps_mapping,
+        dtype='object'
+    )
+    nps_mapping_df['pull_datetime'] = pd.to_datetime(nps_mapping_df['pull_datetime'])
+    nps_mapping_df['nps_mapping_created_datetime_at'] = pd.to_datetime(nps_mapping_df['nps_mapping_created_datetime_at'])
+    nps_mapping_df['nps_category_id_at'] = nps_mapping_df['nps_category_id_at'].apply(wf_core_data.utils.to_singleton)
+    nps_mapping_df = nps_mapping_df.astype({
+        'nps_mapping_id_at': 'string',
+        'nps_response': 'int',
+        'nps_category_id_at': 'string'
+    })
+    nps_mapping_df.set_index('nps_response', inplace=True)
+    return nps_mapping_df
