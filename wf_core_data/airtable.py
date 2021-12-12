@@ -425,6 +425,43 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return nps_categories
 
+    def fetch_boolean_categories(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=DATA_DICT_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching boolean categories from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='Boolean categories',
+            params=params
+        )
+        boolean_categories=list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('boolean_category_id_at', record.get('id')),
+                ('boolean_category_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('boolean_category', fields.get('boolean_category')),
+                ('boolean_display_name_english', fields.get('boolean_display_name_english')),
+                ('boolean_display_name_spanish', fields.get('boolean_display_name_spanish'))            ])
+            boolean_categories.append(datum)
+        if format == 'dataframe':
+            boolean_categories = convert_boolean_categories_to_df(boolean_categories)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return boolean_categories
+
     def write_dataframe(
         self,
         df,
@@ -733,3 +770,21 @@ def convert_nps_categories_to_df(nps_categories):
     })
     nps_categories_df.set_index('nps_category', inplace=True)
     return nps_categories_df
+
+def convert_boolean_categories_to_df(boolean_categories):
+    if len(boolean_categories) == 0:
+        return pd.DataFrame()
+    boolean_categories_df = pd.DataFrame(
+        boolean_categories,
+        dtype='object'
+    )
+    boolean_categories_df['pull_datetime'] = pd.to_datetime(boolean_categories_df['pull_datetime'])
+    boolean_categories_df['boolean_category_created_datetime_at'] = pd.to_datetime(boolean_categories_df['boolean_category_created_datetime_at'])
+    boolean_categories_df = boolean_categories_df.astype({
+        'boolean_category_id_at': 'string',
+        'boolean_category': 'string',
+        'boolean_display_name_english': 'string',
+        'boolean_display_name_spanish': 'string'
+    })
+    boolean_categories_df.set_index('boolean_category', inplace=True)
+    return boolean_categories_df
