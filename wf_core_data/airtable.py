@@ -314,6 +314,43 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return ethnicity_categories
 
+    def fetch_gender_categories(
+        self,
+        pull_datetime=None,
+        params=None,
+        base_id=DATA_DICT_BASE_ID,
+        format='dataframe',
+        delay=DEFAULT_DELAY,
+        max_requests=DEFAULT_MAX_REQUESTS
+    ):
+        pull_datetime = wf_core_data.utils.to_datetime(pull_datetime)
+        if pull_datetime is None:
+            pull_datetime = datetime.datetime.now(tz=datetime.timezone.utc)
+        logger.info('Fetching gender categories from Airtable')
+        records = self.bulk_get(
+            base_id=base_id,
+            endpoint='Gender categories',
+            params=params
+        )
+        gender_categories=list()
+        for record in records:
+            fields = record.get('fields', {})
+            datum = OrderedDict([
+                ('gender_category_id_at', record.get('id')),
+                ('gender_category_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
+                ('pull_datetime', pull_datetime),
+                ('gender_category', fields.get('gender_category')),
+                ('gender_display_name_english', fields.get('gender_display_name_english')),
+                ('gender_display_name_spanish', fields.get('gender_display_name_spanish'))            ])
+            gender_categories.append(datum)
+        if format == 'dataframe':
+            gender_categories = convert_gender_categories_to_df(gender_categories)
+        elif format == 'list':
+            pass
+        else:
+            raise ValueError('Data format \'{}\' not recognized'.format(format))
+        return gender_categories
+
     def write_dataframe(
         self,
         df,
@@ -568,3 +605,21 @@ def convert_ethnicity_categories_to_df(ethnicity_categories):
     })
     ethnicity_categories_df.set_index('ethnicity_category', inplace=True)
     return ethnicity_categories_df
+
+def convert_gender_categories_to_df(gender_categories):
+    if len(gender_categories) == 0:
+        return pd.DataFrame()
+    gender_categories_df = pd.DataFrame(
+        gender_categories,
+        dtype='object'
+    )
+    gender_categories_df['pull_datetime'] = pd.to_datetime(gender_categories_df['pull_datetime'])
+    gender_categories_df['gender_category_created_datetime_at'] = pd.to_datetime(gender_categories_df['gender_category_created_datetime_at'])
+    gender_categories_df = gender_categories_df.astype({
+        'gender_category_id_at': 'string',
+        'gender_category': 'string',
+        'gender_display_name_english': 'string',
+        'gender_display_name_spanish': 'string'
+    })
+    gender_categories_df.set_index('gender_category', inplace=True)
+    return gender_categories_df
