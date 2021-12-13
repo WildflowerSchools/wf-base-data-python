@@ -277,6 +277,94 @@ class AirtableClient:
             raise ValueError('Data format \'{}\' not recognized'.format(format))
         return pod_data
 
+    def fetch_ethnicity_lookup(self):
+        ethnicity_categories = self.fetch_ethnicity_categories()
+        ethnicity_mapping = self.fetch_ethnicity_mapping()
+        ethnicity_lookup = (
+            ethnicity_mapping
+            .join(
+                ethnicity_categories['ethnicity_category'],
+                how='left',
+                on='ethnicity_category_id_at'
+            )
+            .reindex(columns=[
+                'ethnicity_category'
+            ])
+            .sort_index()
+        )
+        return ethnicity_lookup
+
+    def fetch_gender_lookup(self):
+        gender_categories = self.fetch_gender_categories()
+        gender_mapping = self.fetch_gender_mapping()
+        gender_lookup = (
+            gender_mapping
+            .join(
+                gender_categories['gender_category'],
+                how='left',
+                on='gender_category_id_at'
+            )
+            .reindex(columns=[
+                'gender_category'
+            ])
+            .sort_index()
+            .sort_values('gender_category')
+        )
+        return gender_lookup
+
+    def fetch_household_income_lookup(self):
+        household_income_categories = self.fetch_household_income_categories()
+        household_income_mapping = self.fetch_household_income_mapping()
+        household_income_lookup = (
+            household_income_mapping
+            .join(
+                household_income_categories['household_income_category'],
+                how='left',
+                on='household_income_category_id_at'
+            )
+            .reindex(columns=[
+                'household_income_category'
+            ])
+            .sort_index()
+            .sort_values('household_income_category')
+        )
+        return household_income_lookup
+
+    def fetch_nps_lookup(self):
+        nps_categories = self.fetch_nps_categories()
+        nps_mapping = self.fetch_nps_mapping()
+        nps_lookup = (
+            nps_mapping
+            .join(
+                nps_categories['nps_category'],
+                how='left',
+                on='nps_category_id_at'
+            )
+            .reindex(columns=[
+                'nps_category'
+            ])
+            .sort_index()
+        )
+        return nps_lookup
+
+    def fetch_boolean_lookup(self):
+        boolean_categories = self.fetch_boolean_categories()
+        boolean_mapping = self.fetch_boolean_mapping()
+        boolean_lookup = (
+            boolean_mapping
+            .join(
+                boolean_categories['boolean_category'],
+                how='left',
+                on='boolean_category_id_at'
+            )
+            .reindex(columns=[
+                'boolean_category'
+            ])
+            .sort_index()
+            .sort_values('boolean_category')
+        )
+        return boolean_lookup
+
     def fetch_ethnicity_categories(
         self,
         pull_datetime=None,
