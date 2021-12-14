@@ -1,4 +1,7 @@
 import pandas as pd
+import re
+
+INT_RE = re.compile(r'[0-9]+')
 
 def to_datetime(object):
     try:
@@ -55,6 +58,19 @@ def extract_alphanumeric(object):
         return None
     alphanumeric_string = ''.join(ch for ch in object_string if ch.isalnum())
     return alphanumeric_string
+
+def extract_int(object):
+    if pd.isna(object):
+        return None
+    try:
+        object_string = str(object)
+    except:
+        return None
+    m = INT_RE.search(object_string)
+    if m:
+        return pd.to_numeric(m[0]).astype('int')
+    else:
+        return None
 
 def infer_school_year(
     date,
