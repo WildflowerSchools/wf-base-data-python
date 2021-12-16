@@ -1165,7 +1165,6 @@ class TransparentClassroomClient:
                 ('form_updated_at', datum.get('updated_at')),
                 ('form_last_emailed_at', datum.get('last_emailed_at')),
                 ('form_due_date', datum.get('due_date')),
-                ('parent_form_id_tc', datum.get('parent_form_id')),
                 ('form_fields', datum.get('fields'))
             ])
             form_data.append(form_datum)
@@ -1625,7 +1624,6 @@ def convert_form_data_to_df(form_data):
             'form_id_tc': 'int',
             'form_template_id_tc': 'int',
             'form_state': 'string',
-            'parent_form_id_tc': 'Int64'
     })
     form_data_df.set_index(['school_id_tc', 'form_id_tc'], inplace=True)
     return form_data_df
