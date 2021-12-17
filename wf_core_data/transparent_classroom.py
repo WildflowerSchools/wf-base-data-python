@@ -1161,9 +1161,9 @@ class TransparentClassroomClient:
                 ('form_template_id_tc', datum.get('form_template_id')),
                 ('pull_datetime', pull_datetime),
                 ('form_state', datum.get('state')),
-                ('form_created_at', datum.get('created_at')),
-                ('form_updated_at', datum.get('updated_at')),
-                ('form_last_emailed_at', datum.get('last_emailed_at')),
+                ('form_created', datum.get('created_at')),
+                ('form_updated', datum.get('updated_at')),
+                ('form_last_emailed', datum.get('last_emailed_at')),
                 ('form_due_date', datum.get('due_date')),
                 ('form_fields', datum.get('fields'))
             ])
@@ -1615,9 +1615,9 @@ def convert_form_data_to_df(form_data):
         dtype='object'
     )
     form_data_df['pull_datetime'] = pd.to_datetime(form_data_df['pull_datetime'])
-    form_data_df['form_created_at'] = pd.to_datetime(form_data_df['form_created_at'])
-    form_data_df['form_updated_at'] = pd.to_datetime(form_data_df['form_updated_at'])
-    form_data_df['form_last_emailed_at'] = pd.to_datetime(form_data_df['form_last_emailed_at'])
+    form_data_df['form_created'] = pd.to_datetime(form_data_df['form_created'])
+    form_data_df['form_updated'] = pd.to_datetime(form_data_df['form_updated'])
+    form_data_df['form_last_emailed'] = pd.to_datetime(form_data_df['form_last_emailed'])
     form_data_df['form_due_date'] = pd.to_datetime(form_data_df['form_due_date'])
     form_data_df = form_data_df.astype({
             'school_id_tc': 'int',
