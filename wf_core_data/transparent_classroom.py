@@ -1158,6 +1158,7 @@ class TransparentClassroomClient:
             form_datum = OrderedDict([
                 ('school_id_tc', school_id),
                 ('form_id_tc', datum.get('id')),
+                ('student_id_tc', datum.get('child_id')),
                 ('form_template_id_tc', datum.get('form_template_id')),
                 ('pull_datetime', pull_datetime),
                 ('form_state', datum.get('state')),
@@ -1622,6 +1623,7 @@ def convert_form_data_to_df(form_data):
     form_data_df = form_data_df.astype({
             'school_id_tc': 'int',
             'form_id_tc': 'int',
+            'child_id_tc': 'int',
             'form_template_id_tc': 'int',
             'form_state': 'string',
     })
