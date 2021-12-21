@@ -16,7 +16,8 @@ DEFAULT_MAX_REQUESTS = 50
 DEFAULT_WRITE_CHUNK_SIZE = 10
 
 SCHOOLS_BASE_ID = 'appJBT9a4f3b7hWQ2'
-DATA_DICT_BASE_ID = 'appHMyIWgnHqVJymL'
+DATA_DICT_BASE_ID = 'appJBT9a4f3b7hWQ2'
+# DATA_DICT_BASE_ID = 'appHMyIWgnHqVJymL'
 
 class AirtableClient:
     def __init__(
