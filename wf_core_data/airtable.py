@@ -539,7 +539,7 @@ class AirtableClient:
                 ('boolean_category_id_at', record.get('id')),
                 ('boolean_category_created_datetime_at', wf_core_data.utils.to_datetime(record.get('createdTime'))),
                 ('pull_datetime', pull_datetime),
-                ('boolean_category', fields.get('boolean_category')),
+                ('boolean_category', wf_core_data.utils.to_boolean(fields.get('boolean_category'))),
                 ('boolean_display_name_english', fields.get('boolean_display_name_english')),
                 ('boolean_display_name_spanish', fields.get('boolean_display_name_spanish'))            ])
             boolean_categories.append(datum)
@@ -1056,7 +1056,7 @@ def convert_boolean_categories_to_df(boolean_categories):
     boolean_categories_df['boolean_category_created_datetime_at'] = pd.to_datetime(boolean_categories_df['boolean_category_created_datetime_at'])
     boolean_categories_df = boolean_categories_df.astype({
         'boolean_category_id_at': 'string',
-        'boolean_category': 'string',
+        'boolean_category': 'bool',
         'boolean_display_name_english': 'string',
         'boolean_display_name_spanish': 'string'
     })

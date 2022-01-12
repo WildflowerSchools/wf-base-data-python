@@ -36,9 +36,9 @@ def to_boolean(object):
     if isinstance(object, bool):
         return object
     if isinstance(object, str):
-        if object in ['True', 'TRUE', 'T']:
+        if object in ['True', 'true', 'TRUE', 'T']:
             return True
-        if object in ['False', 'FALSE', 'F']:
+        if object in ['False', 'false', 'FALSE', 'F']:
             return False
         return None
     if isinstance(object, int):
