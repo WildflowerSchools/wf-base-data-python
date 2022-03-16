@@ -70,7 +70,8 @@ def write_rosters_local(
             '{}.xlsx'.format(
                 filename
             )
-        )
+        ),
+        index=False
     )
     for legal_entity_short_name, roster_df_group in roster_data.groupby('legal_entity_short_name_wf'):
         output = (
@@ -105,7 +106,8 @@ def write_rosters_local(
                 '{}.xlsx'.format(
                     filename
                 )
-            )
+            ),
+            index=False
         )
     for school_short_name, roster_df_group in roster_data.groupby('school_short_name_wf'):
         output = (
