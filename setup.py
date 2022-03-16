@@ -9,7 +9,8 @@ BASE_DEPENDENCIES = [
     'pandas>=1.3',
     'numpy>=1.19',
     'requests>=2.25',
-    'gspread-pandas>=2.2'
+    'gspread-pandas>=2.2',
+    'python-slugify>=5.0'
 ]
 
 # TEST_DEPENDENCIES = [
