@@ -8,6 +8,7 @@ VERSION = open(os.path.join(BASEDIR, 'VERSION')).read().strip()
 BASE_DEPENDENCIES = [
     'pandas>=1.3',
     'numpy>=1.19',
+    'scipy>=1.6.3',
     'requests>=2.25',
     'gspread-pandas>=2.2',
     'python-slugify>=5.0'

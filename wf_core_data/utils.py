@@ -1,7 +1,47 @@
 import pandas as pd
+import numpy as np
+import scipy.stats
 import re
 
 INT_RE = re.compile(r'[0-9]+')
+
+DAYS_PER_YEAR = 365.25
+MONTHS_PER_YEAR = 12
+DEFAULT_MIN_GROWTH_DAYS = 120
+DEFAULT_SCHOOL_YEAR_DURATION_MONTHS = 9
+
+def calculate_percentile_growth_per_school_year(
+    starting_percentile,
+    ending_percentile,
+    days_between_tests,
+    min_growth_days=DEFAULT_MIN_GROWTH_DAYS,
+    school_year_duration_months=DEFAULT_SCHOOL_YEAR_DURATION_MONTHS
+):
+    if days_between_tests < min_growth_days:
+        return np.nan
+    starting_z = scipy.stats.norm.ppf(starting_percentile/100.0)
+    ending_z = scipy.stats.norm.ppf(ending_percentile/100.0)
+    z_growth = ending_z - starting_z
+    z_growth_per_school_year = calculate_score_growth_per_school_year(
+        score_growth=z_growth,
+        days_between_tests=days_between_tests,
+        school_year_duration_months=school_year_duration_months
+    )
+    ending_z_school_year = starting_z + z_growth_per_school_year
+    ending_percentile_school_year = scipy.stats.norm.cdf(ending_z_school_year)*100.0
+    percentile_growth_per_school_year = ending_percentile_school_year - starting_percentile
+    return percentile_growth_per_school_year
+
+def calculate_score_growth_per_school_year(
+    score_growth,
+    days_between_tests,
+    min_growth_days=DEFAULT_MIN_GROWTH_DAYS,
+    school_year_duration_months=DEFAULT_SCHOOL_YEAR_DURATION_MONTHS
+):
+    if days_between_tests < min_growth_days:
+        return np.nan
+    score_growth_per_school_year = (DAYS_PER_YEAR*(school_year_duration_months/MONTHS_PER_YEAR)/days_between_tests)*score_growth
+    return score_growth_per_school_year
 
 def to_datetime(object):
     try:
