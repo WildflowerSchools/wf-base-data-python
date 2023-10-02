@@ -214,16 +214,34 @@ def fetch_master_roster_data(
     logger.info('Fetched data for {} target schools'.format(len(school_data)))
     ### Classroom data
     logger.info('Fetching classroom data from Transparent Classroom')
+    classroom_data_all = transparent_classroom_client.fetch_classroom_data(
+        school_ids=schools.index,
+        pull_datetime=pull_datetime,
+        format='dataframe'
+    )
     classroom_data = (
-        transparent_classroom_client.fetch_classroom_data(
-            school_ids=schools.index,
-            pull_datetime=pull_datetime,
-            format='dataframe'
-        )
+        classroom_data_all
         .join(
             classrooms,
             how='inner'
         )
+    )
+    grade_from_classroom_data = (
+        classroom_data_all
+        .assign(grade_string = classroom_data_all['classroom_name_tc'].apply(
+            lambda x: slugify.slugify(x, separator='_')
+        ))
+        .join(
+            grade_map['grade_short_name_wf'],
+            how='inner',
+            on='grade_string'
+        )
+        .reindex(columns=[
+            'grade_short_name_wf'
+        ])
+        .rename(columns={
+            'grade_short_name_wf': 'alt_grade_from_classroom_name'
+        })
     )
     logger.info('Fetched data for {} target classrooms'.format(len(classroom_data)))
     ### Student classroom data
@@ -271,6 +289,21 @@ def fetch_master_roster_data(
     logger.info('Fetched data for {} students'.format(len(student_data)))
     ## Join data tables
     logger.info('Joining student data with other data')
+    student_grade_from_classroom_data = (
+        student_data
+        .join(
+            student_classroom_data.drop(columns='pull_datetime'),
+            how='left'
+        )
+        .join(
+            grade_from_classroom_data,
+            how='inner',
+            on=['school_id_tc', 'classroom_id_tc']
+        )
+        .reindex(columns=[
+            'alt_grade_from_classroom_name'
+        ])        
+    )
     master_roster_data = (
         student_data
         .join(
@@ -301,6 +334,10 @@ def fetch_master_roster_data(
             teacher_data.drop(columns='pull_datetime'),
             how='left',
             on=['school_id_tc', 'teacher_id_tc']
+        )
+        .join(
+            student_grade_from_classroom_data,
+            how='left'
         )
     )
     logger.info('Roster includes {} students after joining with other data'.format(len(master_roster_data)))
@@ -355,6 +392,8 @@ def fetch_master_roster_data(
             return grade_map_dict.get(slugify.slugify(row['student_program_tc'], separator='_'))
         if not pd.isna(row['classroom_name_tc']) and slugify.slugify(row['classroom_name_tc'], separator='_') in grade_map_dict.keys():
             return grade_map_dict.get(slugify.slugify(row['classroom_name_tc'], separator='_'))
+        if not pd.isna(row['alt_grade_from_classroom_name']):
+            return row['alt_grade_from_classroom_name']
         return None
     master_roster_data['student_grade_wf'] = master_roster_data.apply(extract_grade_name, axis=1)
     ## Rearrange rows and columns
